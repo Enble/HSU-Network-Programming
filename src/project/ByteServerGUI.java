@@ -72,6 +72,7 @@ public class ByteServerGUI {
                     serverSocket.close();
                 } catch (IOException ex) {
                     System.err.println("서버 닫기 오류: " + ex.getMessage());
+                    System.exit(-1);
                 }
                 System.exit(0);
             }
