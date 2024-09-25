@@ -17,10 +17,11 @@ import javax.swing.JTextArea;
 public class ByteServerGUI {
 
     private final JFrame frame;
+    private final int port;
+
     private JTextArea t_display;
 
     private ServerSocket serverSocket;
-    private int port;
 
     public ByteServerGUI(int port) {
         this.port = port;
@@ -35,6 +36,9 @@ public class ByteServerGUI {
         frame.setVisible(true);
     }
 
+    /*
+     * GUI related methods
+     */
     private void buildGUI() {
         frame.add(createDisplayPanel(), BorderLayout.CENTER);
         frame.add(createControlPanel(), BorderLayout.SOUTH);
@@ -76,6 +80,9 @@ public class ByteServerGUI {
         return panel;
     }
 
+    /*
+     * socket related methods
+     */
     private void startServer() {
         Socket clientSocket = null;
         try {
@@ -110,7 +117,7 @@ public class ByteServerGUI {
                 printDisplay("클라이언트 메시지: " + message);
             }
 
-            System.out.println("클라이언트가 연결을 종료했습니다.");
+            printDisplay("클라이언트가 연결을 종료했습니다.");
         } catch (IOException e) {
             System.err.println("서버 읽기 오류: " + e.getMessage());
         } finally {
@@ -124,7 +131,7 @@ public class ByteServerGUI {
 
     private void printDisplay(String msg) {
         t_display.append(msg + "\n");
-//        t_display.setCaretPosition(t_display.getDocument().getLength());
+        t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
     public static void main(String[] args) {

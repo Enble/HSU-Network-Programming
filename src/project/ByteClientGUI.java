@@ -17,10 +17,12 @@ import javax.swing.JTextField;
 public class ByteClientGUI {
 
     private final JFrame frame;
-    private JTextArea t_display;
+    private final String serverAddress;
+    private final int serverPort;
 
-    private String serverAddress;
-    private int serverPort;
+    private JTextArea t_display;
+    private JButton sendButton;
+
     private OutputStream out;
 
     public ByteClientGUI(String serverAddress, int serverPort) {
@@ -37,6 +39,9 @@ public class ByteClientGUI {
         frame.setVisible(true);
     }
 
+    /*
+     * GUI related methods
+     */
     private void buildGUI() {
         frame.add(createDisplayPanel(), BorderLayout.CENTER);
 
@@ -65,10 +70,11 @@ public class ByteClientGUI {
         JPanel panel = new JPanel(new BorderLayout());
 
         JTextField textField = new JTextField();
-        JButton button = new JButton("보내기");
+        sendButton = new JButton("보내기");
+        sendButton.setEnabled(false);
 
         panel.add(textField, BorderLayout.CENTER);
-        panel.add(button, BorderLayout.EAST);
+        panel.add(sendButton, BorderLayout.EAST);
 
         // Event Listeners
         ActionListener listener = new ActionListener() {
@@ -89,24 +95,15 @@ public class ByteClientGUI {
 
                 sendMessage(message);
 
-                t_display.append("나: " + message + "\n");
+                printDisplay("나: " + message);
                 textField.setText("");
             }
         };
 
         textField.addActionListener(listener);
-        button.addActionListener(listener);
+        sendButton.addActionListener(listener);
 
         return panel;
-    }
-
-    private void sendMessage(int msg) {
-        try {
-            out.write(msg);
-        } catch (IOException e) {
-            System.err.println("클라이언트 쓰기 오류: " + e.getMessage());
-            System.exit(-1);
-        }
     }
 
     private JPanel createControlPanel() {
@@ -127,6 +124,7 @@ public class ByteClientGUI {
             public void actionPerformed(ActionEvent e) {
                 try {
                     connectToServer();
+                    sendButton.setEnabled(true);
                     connectButton.setEnabled(false);
                     disconnectButton.setEnabled(true);
                     exitButton.setEnabled(false);
@@ -140,6 +138,7 @@ public class ByteClientGUI {
             public void actionPerformed(ActionEvent e) {
                 try {
                     disconnect();
+                    sendButton.setEnabled(false);
                     connectButton.setEnabled(true);
                     disconnectButton.setEnabled(false);
                     exitButton.setEnabled(true);
@@ -156,6 +155,23 @@ public class ByteClientGUI {
         });
 
         return panel;
+    }
+
+    private void printDisplay(String msg) {
+        t_display.append(msg + "\n");
+        t_display.setCaretPosition(t_display.getDocument().getLength());
+    }
+
+    /*
+     * socket related methods
+     */
+    private void sendMessage(int msg) {
+        try {
+            out.write(msg);
+        } catch (IOException e) {
+            System.err.println("클라이언트 쓰기 오류: " + e.getMessage());
+            System.exit(-1);
+        }
     }
 
     private void connectToServer() throws IOException {
