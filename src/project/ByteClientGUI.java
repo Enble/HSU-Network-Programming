@@ -124,13 +124,15 @@ public class ByteClientGUI {
             public void actionPerformed(ActionEvent e) {
                 try {
                     connectToServer();
-                    sendButton.setEnabled(true);
-                    connectButton.setEnabled(false);
-                    disconnectButton.setEnabled(true);
-                    exitButton.setEnabled(false);
                 } catch (IOException ex) {
                     System.err.println("클라이언트 접속 오류: " + ex.getMessage());
+                    return;
                 }
+
+                sendButton.setEnabled(true);
+                connectButton.setEnabled(false);
+                disconnectButton.setEnabled(true);
+                exitButton.setEnabled(false);
             }
         });
         disconnectButton.addActionListener(new ActionListener() {
@@ -138,13 +140,15 @@ public class ByteClientGUI {
             public void actionPerformed(ActionEvent e) {
                 try {
                     disconnect();
-                    sendButton.setEnabled(false);
-                    connectButton.setEnabled(true);
-                    disconnectButton.setEnabled(false);
-                    exitButton.setEnabled(true);
                 } catch (IOException ex) {
                     System.err.println("클라이언트 닫기 오류: " + ex.getMessage());
+                    return;
                 }
+
+                sendButton.setEnabled(false);
+                connectButton.setEnabled(true);
+                disconnectButton.setEnabled(false);
+                exitButton.setEnabled(true);
             }
         });
         exitButton.addActionListener(new ActionListener() {
