@@ -10,6 +10,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Socket;
 import javax.swing.JButton;
@@ -28,7 +30,7 @@ public class MsgClientGUI {
     private JTextArea t_display;
     private JButton sendButton;
 
-    private Writer out;
+    private PrintWriter out;
 
     public MsgClientGUI(String serverAddress, int serverPort) {
         this.serverAddress = serverAddress;
@@ -90,7 +92,7 @@ public class MsgClientGUI {
                     return;
                 }
 
-                sendMessage(text + '\n');
+                sendMessage(text);
 
                 printDisplay("나: " + text);
                 textField.setText("");
@@ -167,20 +169,16 @@ public class MsgClientGUI {
      * socket related methods
      */
     private void sendMessage(String msg) {
-        try {
-            out.write(msg);
-            out.flush();
-        } catch (IOException e) {
-            System.err.println("클라이언트 쓰기 오류: " + e.getMessage());
-            System.exit(-1);
-        }
+        out.println(msg);
     }
 
     private void connectToServer() throws IOException {
         Socket socket = new Socket(serverAddress, serverPort);
         OutputStream os = socket.getOutputStream();
         OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
-        out = new BufferedWriter(osw);
+        BufferedWriter bw = new BufferedWriter(osw);
+
+        out = new PrintWriter(bw, true);
     }
 
     private void disconnect() throws IOException {
