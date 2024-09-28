@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -112,7 +113,8 @@ public class IntServerGUI {
 
     private void receiveMessages(Socket cs) {
         try {
-            DataInputStream in = new DataInputStream(cs.getInputStream());
+            BufferedInputStream bis = new BufferedInputStream(cs.getInputStream());
+            DataInputStream in = new DataInputStream(bis);
 
             int message;
             try {

@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -173,6 +174,7 @@ public class IntClientGUI {
     private void sendMessage(int msg) {
         try {
             out.writeInt(msg);
+            out.flush();
         } catch (IOException e) {
             System.err.println("클라이언트 쓰기 오류: " + e.getMessage());
             System.exit(-1);
@@ -181,7 +183,9 @@ public class IntClientGUI {
 
     private void connectToServer() throws IOException {
         Socket socket = new Socket(serverAddress, serverPort);
-        out = new DataOutputStream(socket.getOutputStream());
+        OutputStream os = socket.getOutputStream();
+        BufferedOutputStream bos = new BufferedOutputStream(os);
+        out = new DataOutputStream(bos);
     }
 
     private void disconnect() throws IOException {
