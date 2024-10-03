@@ -129,7 +129,7 @@ public class EchoServerGUI {
                 out.flush();
             }
 
-            printDisplay("클라이언트가 연결을 종료했습니다.");
+            printDisplay("클라이언트가 연결을 종료했습니다." + "\n");
         } catch (IOException e) {
             System.err.println("서버 읽기 오류: " + e.getMessage());
         } finally {
