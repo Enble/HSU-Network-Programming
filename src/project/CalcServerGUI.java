@@ -138,6 +138,8 @@ public class CalcServerGUI {
                     out.writeDouble(result);
                     out.flush();
                 }
+            } catch (IOException e) {
+                System.err.println("메시지 수신 오류: " + e.getMessage());
             } catch (ClassNotFoundException e) {
                 System.err.println("클래스 찾기 오류: " + e.getMessage());
             }
