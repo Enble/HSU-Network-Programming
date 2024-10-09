@@ -124,6 +124,19 @@ public class CalcServerGUI {
         }
     }
 
+    private class ClientHandler implements Runnable {
+        private final Socket clientSocket;
+
+        public ClientHandler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        @Override
+        public void run() {
+            receiveMessages(clientSocket);
+        }
+    }
+
     private void receiveMessages(Socket cs) {
         try {
             ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(cs.getInputStream()));
@@ -180,18 +193,5 @@ public class CalcServerGUI {
     private void printDisplay(String msg) {
         t_display.append(msg);
         t_display.setCaretPosition(t_display.getDocument().getLength());
-    }
-
-    private class ClientHandler implements Runnable {
-        private final Socket clientSocket;
-
-        public ClientHandler(Socket clientSocket) {
-            this.clientSocket = clientSocket;
-        }
-
-        @Override
-        public void run() {
-            receiveMessages(clientSocket);
-        }
     }
 }
