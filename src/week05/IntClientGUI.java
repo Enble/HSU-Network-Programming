@@ -1,20 +1,14 @@
-package project;
+package week05;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.Reader;
-import java.io.Writer;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -22,7 +16,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class EchoClientGUI {
+public class IntClientGUI {
 
     private final JFrame frame;
     private final String serverAddress;
@@ -31,14 +25,13 @@ public class EchoClientGUI {
     private JTextArea t_display;
     private JButton sendButton;
 
-    private Writer out;
-    private Reader in;
+    private DataOutputStream out;
 
-    public EchoClientGUI(String serverAddress, int serverPort) {
+    public IntClientGUI(String serverAddress, int serverPort) {
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;   
 
-        frame = new JFrame("EchoClient GUI");
+        frame = new JFrame("IntClient GUI");
 
         buildGUI();
 
@@ -94,11 +87,18 @@ public class EchoClientGUI {
                     return;
                 }
 
-                sendMessage(text);
-                printDisplay("나: " + text + "\n");
-                textField.setText("");
+                int message;
+                try {
+                    message = Integer.parseInt(text);
+                } catch (NumberFormatException ex) {
+                    textField.setText("");
+                    return;
+                }
 
-                receiveMessage();
+                sendMessage(message);
+
+                printDisplay("나: " + message);
+                textField.setText("");
             }
         };
 
@@ -164,40 +164,28 @@ public class EchoClientGUI {
     }
 
     private void printDisplay(String msg) {
-        t_display.append(msg);
+        t_display.append(msg + "\n");
         t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
     /*
      * socket related methods
      */
-    private void sendMessage(String msg) {
+    private void sendMessage(int msg) {
         try {
-            out.write(msg + "\n");
+            out.writeInt(msg);
             out.flush();
         } catch (IOException e) {
-            System.err.println("메시지 전송 오류: " + e.getMessage());
-        }
-    }
-
-    private void receiveMessage() {
-        try {
-            String inMsg = ((BufferedReader) in).readLine();
-            printDisplay("서버: " + inMsg + "\n");
-        } catch (IOException e) {
-            System.err.println("메시지 수신 오류: " + e.getMessage());
+            System.err.println("클라이언트 쓰기 오류: " + e.getMessage());
+            System.exit(-1);
         }
     }
 
     private void connectToServer() throws IOException {
         Socket socket = new Socket(serverAddress, serverPort);
         OutputStream os = socket.getOutputStream();
-
-        OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-        out = new BufferedWriter(osw);
-
-        InputStreamReader isr = new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8);
-        in = new BufferedReader(isr);
+        BufferedOutputStream bos = new BufferedOutputStream(os);
+        out = new DataOutputStream(bos);
     }
 
     private void disconnect() throws IOException {
@@ -208,6 +196,6 @@ public class EchoClientGUI {
         String serverAddress = "localhost";
         int serverPort = 51111;
 
-        new EchoClientGUI(serverAddress, serverPort);
+        new IntClientGUI(serverAddress, serverPort);
     }
 }

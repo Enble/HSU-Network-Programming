@@ -1,4 +1,4 @@
-package project;
+package week05;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -16,7 +16,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class MsgMultiServerGUI {
+public class MsgServerGUI {
 
     private final JFrame frame;
     private final int port;
@@ -25,10 +25,10 @@ public class MsgMultiServerGUI {
 
     private ServerSocket serverSocket;
 
-    public MsgMultiServerGUI(int port) {
+    public MsgServerGUI(int port) {
         this.port = port;
 
-        frame = new JFrame("MsgMultiServer GUI");
+        frame = new JFrame("MsgServer GUI");
 
         buildGUI();
 
@@ -96,9 +96,7 @@ public class MsgMultiServerGUI {
                 clientSocket = serverSocket.accept();
                 t_display.append("클라이언트가 연결되었습니다.\n");
 
-                ClientHandler clientHandler = new ClientHandler(clientSocket);
-                Thread thread = new Thread(clientHandler);
-                thread.start();
+                receiveMessages(clientSocket);
             }
         } catch (IOException e) {
             System.err.println("서버 오류: " + e.getMessage());
@@ -110,19 +108,6 @@ public class MsgMultiServerGUI {
             } catch (IOException e) {
                 System.err.println("서버 닫기 오류: " + e.getMessage());
             }
-        }
-    }
-
-    private class ClientHandler implements Runnable {
-        private final Socket clientSocket;
-
-        public ClientHandler(Socket socket) {
-            this.clientSocket = socket;
-        }
-
-        @Override
-        public void run() {
-            receiveMessages(clientSocket);
         }
     }
 
@@ -157,6 +142,6 @@ public class MsgMultiServerGUI {
     public static void main(String[] args) {
         int port = 51111;
 
-        new MsgMultiServerGUI(port).startServer();
+        new MsgServerGUI(port).startServer();
     }
 }

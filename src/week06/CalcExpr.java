@@ -1,4 +1,4 @@
-package project;
+package week06;
 
 import java.io.Serializable;
 

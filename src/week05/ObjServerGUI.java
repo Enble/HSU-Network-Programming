@@ -1,13 +1,12 @@
-package project;
+package week05;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import javax.swing.JButton;
@@ -16,7 +15,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class IntServerGUI {
+public class ObjServerGUI {
 
     private final JFrame frame;
     private final int port;
@@ -25,7 +24,7 @@ public class IntServerGUI {
 
     private ServerSocket serverSocket;
 
-    public IntServerGUI(int port) {
+    public ObjServerGUI(int port) {
         this.port = port;
 
         frame = new JFrame("IntServer GUI");
@@ -114,16 +113,18 @@ public class IntServerGUI {
     private void receiveMessages(Socket cs) {
         try {
             BufferedInputStream bis = new BufferedInputStream(cs.getInputStream());
-            DataInputStream in = new DataInputStream(bis);
+            ObjectInputStream in = new ObjectInputStream(bis);
 
-            int message;
+            TestMsg message;
             try {
                 while (true) {
-                    message = in.readInt();
+                    message = (TestMsg) in.readObject();
                     printDisplay("클라이언트 메시지: " + message);
                 }
             } catch (IOException e) {
                 printDisplay("클라이언트가 연결을 종료했습니다.");
+            } catch (ClassNotFoundException e) {
+                System.err.println("클래스 찾기 오류: " + e.getMessage());
             }
         } catch (IOException e) {
             System.err.println("서버 읽기 오류: " + e.getMessage());
@@ -144,6 +145,6 @@ public class IntServerGUI {
     public static void main(String[] args) {
         int port = 51111;
 
-        new IntServerGUI(port).startServer();
+        new ObjServerGUI(port).startServer();
     }
 }

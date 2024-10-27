@@ -1,25 +1,21 @@
-package project;
+package week05;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class EchoServerGUI {
+public class IntServerGUI {
 
     private final JFrame frame;
     private final int port;
@@ -28,10 +24,10 @@ public class EchoServerGUI {
 
     private ServerSocket serverSocket;
 
-    public EchoServerGUI(int port) {
+    public IntServerGUI(int port) {
         this.port = port;
 
-        frame = new JFrame("EchoServer GUI");
+        frame = new JFrame("IntServer GUI");
 
         buildGUI();
 
@@ -116,20 +112,18 @@ public class EchoServerGUI {
 
     private void receiveMessages(Socket cs) {
         try {
-            InputStreamReader isr = new InputStreamReader(cs.getInputStream(), StandardCharsets.UTF_8);
-            BufferedReader in = new BufferedReader(isr);
+            BufferedInputStream bis = new BufferedInputStream(cs.getInputStream());
+            DataInputStream in = new DataInputStream(bis);
 
-            OutputStreamWriter osw = new OutputStreamWriter(cs.getOutputStream(), StandardCharsets.UTF_8);
-            BufferedWriter out = new BufferedWriter(osw);
-
-            String message;
-            while ((message = in.readLine()) != null) {
-                printDisplay("클라이언트 메시지: " + message + "\n");
-                out.write("'" + message + "' ...echo" + "\n");
-                out.flush();
+            int message;
+            try {
+                while (true) {
+                    message = in.readInt();
+                    printDisplay("클라이언트 메시지: " + message);
+                }
+            } catch (IOException e) {
+                printDisplay("클라이언트가 연결을 종료했습니다.");
             }
-
-            printDisplay("클라이언트가 연결을 종료했습니다." + "\n");
         } catch (IOException e) {
             System.err.println("서버 읽기 오류: " + e.getMessage());
         } finally {
@@ -142,13 +136,13 @@ public class EchoServerGUI {
     }
 
     private void printDisplay(String msg) {
-        t_display.append(msg);
+        t_display.append(msg + "\n");
         t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
     public static void main(String[] args) {
         int port = 51111;
 
-        new EchoServerGUI(port).startServer();
+        new IntServerGUI(port).startServer();
     }
 }

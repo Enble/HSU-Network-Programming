@@ -1,15 +1,19 @@
-package project;
+/*
+    학번 : 2091193
+    이름 : 최재영
+ */
+
+package week06;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import javax.swing.JButton;
@@ -18,7 +22,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class MsgServerGUI {
+public class CalcServerGUI {
 
     private final JFrame frame;
     private final int port;
@@ -27,10 +31,10 @@ public class MsgServerGUI {
 
     private ServerSocket serverSocket;
 
-    public MsgServerGUI(int port) {
+    public CalcServerGUI(int port) {
         this.port = port;
 
-        frame = new JFrame("MsgServer GUI");
+        frame = new JFrame("CalcServer GUI");
 
         buildGUI();
 
@@ -38,6 +42,12 @@ public class MsgServerGUI {
         frame.setLocation(900, 300);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        int port = 51111;
+
+        new CalcServerGUI(port).startServer();
     }
 
     /*
@@ -98,7 +108,8 @@ public class MsgServerGUI {
                 clientSocket = serverSocket.accept();
                 t_display.append("클라이언트가 연결되었습니다.\n");
 
-                receiveMessages(clientSocket);
+                Thread thread = new Thread(new ClientHandler(clientSocket));
+                thread.start();
             }
         } catch (IOException e) {
             System.err.println("서버 오류: " + e.getMessage());
@@ -113,18 +124,40 @@ public class MsgServerGUI {
         }
     }
 
+    private class ClientHandler implements Runnable {
+        private final Socket clientSocket;
+
+        public ClientHandler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        @Override
+        public void run() {
+            receiveMessages(clientSocket);
+        }
+    }
+
     private void receiveMessages(Socket cs) {
         try {
-            InputStream is = cs.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
-            BufferedReader in = new BufferedReader(isr);
+            ObjectInputStream in = new ObjectInputStream(new BufferedInputStream(cs.getInputStream()));
+            DataOutputStream out = new DataOutputStream(new BufferedOutputStream(cs.getOutputStream()));
 
-            String message;
-            while ((message = in.readLine()) != null) {
-                printDisplay("클라이언트 메시지: " + message);
+            CalcExpr message;
+            try {
+                while ((message = (CalcExpr) in.readObject()) != null) {
+                    double result = calc(message);
+
+                    printDisplay(message + " = " + result + "\n");
+                    out.writeDouble(result);
+                    out.flush();
+                }
+            } catch (IOException e) {
+                System.err.println("메시지 수신 오류: " + e.getMessage());
+            } catch (ClassNotFoundException e) {
+                System.err.println("클래스 찾기 오류: " + e.getMessage());
             }
 
-            printDisplay("클라이언트가 연결을 종료했습니다.");
+            printDisplay("클라이언트가 연결을 종료했습니다.\n");
         } catch (IOException e) {
             System.err.println("서버 읽기 오류: " + e.getMessage());
         } finally {
@@ -136,14 +169,29 @@ public class MsgServerGUI {
         }
     }
 
-    private void printDisplay(String msg) {
-        t_display.append(msg + "\n");
-        t_display.setCaretPosition(t_display.getDocument().getLength());
+    private double calc(CalcExpr expr) {
+        double result;
+        switch (expr.operator) {
+            case '+':
+                result = expr.op1 + expr.op2;
+                break;
+            case '-':
+                result = expr.op1 - expr.op2;
+                break;
+            case '*':
+                result = expr.op1 * expr.op2;
+                break;
+            case '/':
+                result = expr.op1 / expr.op2;
+                break;
+            default:
+                result = 0;
+        }
+        return result;
     }
 
-    public static void main(String[] args) {
-        int port = 51111;
-
-        new MsgServerGUI(port).startServer();
+    private void printDisplay(String msg) {
+        t_display.append(msg);
+        t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 }

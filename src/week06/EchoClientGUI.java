@@ -1,46 +1,43 @@
-/*
-    학번 : 2091193
-    이름 : 최재영
- */
-
-package project;
+package week06;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import project.CalcExpr;
 
-public class CalcClientGUI {
+public class EchoClientGUI {
 
     private final JFrame frame;
     private final String serverAddress;
     private final int serverPort;
 
-    private JButton calcButton;
+    private JTextArea t_display;
+    private JButton sendButton;
 
-    private ObjectOutputStream out;
-    private DataInputStream in;
+    private Writer out;
+    private Reader in;
 
-    public CalcClientGUI(String serverAddress, int serverPort) {
+    public EchoClientGUI(String serverAddress, int serverPort) {
         this.serverAddress = serverAddress;
-        this.serverPort = serverPort;
+        this.serverPort = serverPort;   
 
-        frame = new JFrame("CalcClient GUI");
+        frame = new JFrame("EchoClient GUI");
 
         buildGUI();
 
@@ -50,82 +47,62 @@ public class CalcClientGUI {
         frame.setVisible(true);
     }
 
-    public static void main(String[] args) {
-        String serverAddress = "localhost";
-        int serverPort = 51111;
-
-        new CalcClientGUI(serverAddress, serverPort);
-    }
-
     /*
      * GUI related methods
      */
     private void buildGUI() {
-        frame.add(createInputPanel(), BorderLayout.NORTH);
-        frame.add(createControlPanel(), BorderLayout.SOUTH);
+        frame.add(createDisplayPanel(), BorderLayout.CENTER);
+
+        JPanel panel = new JPanel(new GridLayout(2, 0));
+        panel.add(createInputPanel());
+        panel.add(createControlPanel());
+
+        frame.add(panel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createDisplayPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JScrollPane scrollPane = new JScrollPane();
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        t_display = new JTextArea();
+        t_display.setEditable(false);
+
+        scrollPane.setViewportView(t_display);
+
+        return panel;
     }
 
     private JPanel createInputPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel(new BorderLayout());
 
-        JTextField t_op1 = new JTextField(5);
-        JTextField t_op2 = new JTextField(5);
-        JLabel equal = new JLabel("=");
+        JTextField textField = new JTextField();
+        sendButton = new JButton("보내기");
+        sendButton.setEnabled(false);
 
-        String[] operators = {"+", "-", "*", "/"};
-        JComboBox<String> t_operator = new JComboBox<>(operators);
-
-        JTextField t_result = new JTextField(5);
-        t_result.setEditable(false);
-
-        calcButton = new JButton("계산");
-        calcButton.setEnabled(false);
-
-        panel.add(t_op1);
-        panel.add(t_operator);
-        panel.add(t_op2);
-        panel.add(equal);
-        panel.add(t_result);
-        panel.add(calcButton);
+        panel.add(textField, BorderLayout.CENTER);
+        panel.add(sendButton, BorderLayout.EAST);
 
         // Event Listeners
         ActionListener listener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String op1Text = t_op1.getText();
-                String operatorText = t_operator.getSelectedItem().toString();
-                String op2Text = t_op2.getText();
-
-                if (op1Text.isEmpty() || operatorText.isEmpty() || op2Text.isEmpty()) {
+                String text = textField.getText();
+                if (text.isEmpty()) {
                     return;
                 }
 
-                double op1;
-                try {
-                    op1 = Double.parseDouble(op1Text);
-                } catch (NumberFormatException ex) {
-                    t_op1.setText("");
-                    return;
-                }
+                sendMessage(text);
+                printDisplay("나: " + text + "\n");
+                textField.setText("");
 
-                double op2;
-                try {
-                    op2 = Double.parseDouble(op2Text);
-                } catch (NumberFormatException ex) {
-                    t_op2.setText("");
-                    return;
-                }
-
-                char operator = operatorText.charAt(0);
-
-                CalcExpr msg = new CalcExpr(op1, operator, op2);
-                sendMessage(msg);
-
-                double result = receiveMessage();
-                t_result.setText(String.format("%.2f", result));
+                receiveMessage();
             }
         };
-        calcButton.addActionListener(listener);
+
+        textField.addActionListener(listener);
+        sendButton.addActionListener(listener);
 
         return panel;
     }
@@ -153,7 +130,7 @@ public class CalcClientGUI {
                     return;
                 }
 
-                calcButton.setEnabled(true);
+                sendButton.setEnabled(true);
                 connectButton.setEnabled(false);
                 disconnectButton.setEnabled(true);
                 exitButton.setEnabled(false);
@@ -169,7 +146,7 @@ public class CalcClientGUI {
                     return;
                 }
 
-                calcButton.setEnabled(false);
+                sendButton.setEnabled(false);
                 connectButton.setEnabled(true);
                 disconnectButton.setEnabled(false);
                 exitButton.setEnabled(true);
@@ -185,40 +162,51 @@ public class CalcClientGUI {
         return panel;
     }
 
+    private void printDisplay(String msg) {
+        t_display.append(msg);
+        t_display.setCaretPosition(t_display.getDocument().getLength());
+    }
+
     /*
      * socket related methods
      */
-    private void sendMessage(CalcExpr msg) {
+    private void sendMessage(String msg) {
         try {
-            out.writeObject(msg);
+            out.write(msg + "\n");
             out.flush();
         } catch (IOException e) {
             System.err.println("메시지 전송 오류: " + e.getMessage());
         }
     }
 
-    private double receiveMessage() {
-        double result = 0;
+    private void receiveMessage() {
         try {
-            result = in.readDouble();
+            String inMsg = ((BufferedReader) in).readLine();
+            printDisplay("서버: " + inMsg + "\n");
         } catch (IOException e) {
             System.err.println("메시지 수신 오류: " + e.getMessage());
         }
-        return result;
     }
 
     private void connectToServer() throws IOException {
         Socket socket = new Socket(serverAddress, serverPort);
         OutputStream os = socket.getOutputStream();
-        InputStream is = socket.getInputStream();
 
-        out = new ObjectOutputStream(new BufferedOutputStream(os));
-        in = new DataInputStream(new BufferedInputStream(is));
+        OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
+        out = new BufferedWriter(osw);
+
+        InputStreamReader isr = new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8);
+        in = new BufferedReader(isr);
     }
 
     private void disconnect() throws IOException {
-        sendMessage(null);
         out.close();
-        in.close();
+    }
+
+    public static void main(String[] args) {
+        String serverAddress = "localhost";
+        int serverPort = 51111;
+
+        new EchoClientGUI(serverAddress, serverPort);
     }
 }
