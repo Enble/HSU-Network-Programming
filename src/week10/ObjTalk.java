@@ -1,23 +1,20 @@
-package week07;
+package week10;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,9 +23,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class MultiTalk extends JFrame {
+public class ObjTalk extends JFrame {
     private String serverAddress;
     private int serverPort;
+    private String uid;
 
     private JTextField t_input;
     private JTextField t_userId;
@@ -41,20 +39,20 @@ public class MultiTalk extends JFrame {
     private JButton b_disconnect;
     private JButton b_exit;
 
-    private Writer out;
-    private Reader in;
+    private Socket socket;
+    private ObjectOutputStream out;
 
     private Thread receiveThread = null;
 
-    public MultiTalk(String serverAddress, int serverPort) {
-        super("Multi Talk");
+    public ObjTalk(String serverAddress, int serverPort) {
+        super("Object Talk");
 
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
 
         buildGUI();
 
-        setSize(400, 300);
+        setSize(500, 400);
         setLocation(500, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
@@ -64,7 +62,7 @@ public class MultiTalk extends JFrame {
         String serverAddress = "localhost";
         int serverPort = 51111;
 
-        new MultiTalk(serverAddress, serverPort);
+        new ObjTalk(serverAddress, serverPort);
     }
 
     /*
@@ -185,8 +183,8 @@ public class MultiTalk extends JFrame {
         b_connect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                MultiTalk.this.serverAddress = t_serverAddress.getText();
-                MultiTalk.this.serverPort = Integer.parseInt(t_serverPort.getText());
+                ObjTalk.this.serverAddress = t_serverAddress.getText();
+                ObjTalk.this.serverPort = Integer.parseInt(t_serverPort.getText());
 
                 try {
                     connectToServer();
@@ -212,7 +210,6 @@ public class MultiTalk extends JFrame {
                 }
 
                 printDisplay("서버와의 연결이 끊어졌습니다.");
-
                 setUi(false);
             }
         });
@@ -249,71 +246,79 @@ public class MultiTalk extends JFrame {
         return address;
     }
 
-    private void sendUserId() {
-        String uid = t_userId.getText();
-
+    private void send(ChatMsg msg) {
         try {
-            out.write("/uid:" + uid + "\n");
+            out.writeObject(msg);
             out.flush();
-        } catch (IOException ex) {
-            System.err.println("클라이언트 전송 오류: " + ex.getMessage());
-            System.exit(-1);
+        } catch (IOException e) {
+            System.err.println("메시지 전송 오류: " + e.getMessage());
         }
+    }
+
+    private void sendUserId() {
+        uid = t_userId.getText();
+        send(new ChatMsg(uid, ChatMsg.MODE_LOGIN));
     }
 
     private void sendMessage() {
         String message = t_input.getText();
-        if (message.isEmpty()) return;
-
-        try {
-            out.write(message + "\n");
-            out.flush();
-        } catch (IOException e) {
-            System.err.println("메시지 전송 오류: " + e.getMessage());
-            System.exit(-1);
+        if (message.isEmpty()) {
+            return;
         }
+
+        send(new ChatMsg(uid, ChatMsg.MODE_TX_STRING, message));
 
         t_input.setText("");
     }
 
-    private void receiveMessage() {
-        try {
-            String inMsg = ((BufferedReader) in).readLine();
-
-            if (inMsg == null) {
-                try {
-                    disconnect();
-                } catch (IOException ex) {
-                    System.err.println("클라이언트 닫기 오류: " + ex.getMessage());
-                    return;
-                }
-
-                printDisplay("서버와의 연결이 끊어졌습니다.");
-                setUi(false);
-
-                return;
-            }
-
-            printDisplay(inMsg);
-        } catch (IOException e) {
-            System.err.println("메시지 수신 오류: " + e.getMessage());
-        }
-    }
-
     private void connectToServer() throws IOException {
-        Socket socket = new Socket();
+        socket = new Socket();
         SocketAddress sa = new InetSocketAddress(serverAddress, serverPort);
         socket.connect(sa, 3000);
 
-        OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
-        out = new BufferedWriter(osw);
-
-        InputStreamReader isr = new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8);
-        in = new BufferedReader(isr);
+        out = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 
         receiveThread = new Thread(new Runnable() {
+            private ObjectInputStream in;
+
+            private void receiveMessage() {
+                try {
+                    ChatMsg inMsg = (ChatMsg) in.readObject();
+
+                    if (inMsg == null) {
+                        try {
+                            disconnect();
+                        } catch (IOException ex) {
+                            System.err.println("클라이언트 닫기 오류: " + ex.getMessage());
+                            return;
+                        }
+
+                        printDisplay("서버와의 연결이 끊어졌습니다.");
+                        setUi(false);
+
+                        return;
+                    }
+
+                    switch (inMsg.mode) {
+                        case ChatMsg.MODE_TX_STRING:
+                            printDisplay(inMsg.userId + ": " + inMsg.message);
+                            break;
+                    }
+                } catch (IOException e) {
+                    printDisplay("연결을 종료했습니다.");
+                } catch (ClassNotFoundException e) {
+                    printDisplay("잘못된 객체가 전달되었습니다.");
+                }
+            }
+
             @Override
             public void run() {
+                try {
+                    in = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                } catch (IOException e) {
+                    printDisplay("입력 스트림이 열리지 않음");
+                }
+
                 while (receiveThread == Thread.currentThread()) {
                     receiveMessage();
                 }
@@ -323,6 +328,8 @@ public class MultiTalk extends JFrame {
     }
 
     private void disconnect() throws IOException {
+        send(new ChatMsg(uid, ChatMsg.MODE_LOGOUT));
+
         receiveThread = null;
         out.close();
     }
