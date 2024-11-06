@@ -1,6 +1,7 @@
 package week07;
 
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,8 +12,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -22,22 +26,20 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class MultiTalk {
+public class MultiTalk extends JFrame {
+    private String serverAddress;
+    private int serverPort;
 
-    private final JFrame frame;
-
-    private final String serverAddress;
-    private final int serverPort;
-
-    private JTextField t_id;
+    private JTextField t_input;
+    private JTextField t_userId;
     private JTextField t_serverAddress;
     private JTextField t_serverPort;
 
     private JTextArea t_display;
-    private JButton sendButton;
-    private JButton connectButton;
-    private JButton disconnectButton;
-    private JButton exitButton;
+    private JButton b_send;
+    private JButton b_connect;
+    private JButton b_disconnect;
+    private JButton b_exit;
 
     private Writer out;
     private Reader in;
@@ -45,17 +47,17 @@ public class MultiTalk {
     private Thread receiveThread = null;
 
     public MultiTalk(String serverAddress, int serverPort) {
+        super("Multi Talk");
+
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
 
-        frame = new JFrame("P2P Free Talk");
-
         buildGUI();
 
-        frame.setSize(400, 300);
-        frame.setLocation(500, 300);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        setSize(400, 300);
+        setLocation(500, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setVisible(true);
     }
 
     public static void main(String[] args) {
@@ -69,14 +71,14 @@ public class MultiTalk {
      * GUI related methods
      */
     private void buildGUI() {
-        frame.add(createDisplayPanel(), BorderLayout.CENTER);
+        add(createDisplayPanel(), BorderLayout.CENTER);
 
         JPanel panel = new JPanel(new GridLayout(3, 0));
         panel.add(createInputPanel());
         panel.add(createInfoPanel());
         panel.add(createControlPanel());
 
-        frame.add(panel, BorderLayout.SOUTH);
+        add(panel, BorderLayout.SOUTH);
     }
 
     private JPanel createDisplayPanel() {
@@ -97,41 +99,41 @@ public class MultiTalk {
         JPanel panel = new JPanel(new BorderLayout());
 
         JTextField textField = new JTextField();
-        sendButton = new JButton("보내기");
-        sendButton.setEnabled(false);
+        b_send = new JButton("보내기");
+        b_send.setEnabled(false);
 
         panel.add(textField, BorderLayout.CENTER);
-        panel.add(sendButton, BorderLayout.EAST);
+        panel.add(b_send, BorderLayout.EAST);
 
         // Event Listeners
         ActionListener listener = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String text = textField.getText();
-                if (text.isEmpty()) {
-                    return;
-                }
-
-                sendMessage(text);
-                textField.setText("");
+                sendMessage();
             }
         };
 
         textField.addActionListener(listener);
-        sendButton.addActionListener(listener);
+        b_send.addActionListener(listener);
 
         return panel;
     }
 
     private JPanel createInfoPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        t_id = new JTextField("guest" + (int) (Math.random() * 100), 5);
-        t_serverAddress = new JTextField(serverAddress, 5);
-        t_serverPort = new JTextField(String.valueOf(serverPort), 5);
+        t_userId = new JTextField(7);
+        t_serverAddress = new JTextField(12);
+        t_serverPort = new JTextField(5);
+
+        t_userId.setText("guest" + getLocalAddress().split("\\.")[3]);
+        t_serverAddress.setText(this.serverAddress);
+        t_serverPort.setText(String.valueOf(this.serverPort));
+
+        t_serverPort.setHorizontalAlignment(JTextField.CENTER);
 
         panel.add(new JLabel("아이디: "));
-        panel.add(t_id);
+        panel.add(t_userId);
         panel.add(new JLabel("서버 주소: "));
         panel.add(t_serverAddress);
         panel.add(new JLabel("포트번호: "));
@@ -140,40 +142,66 @@ public class MultiTalk {
         return panel;
     }
 
+    private void setUi(boolean isOn) {
+        if (isOn) {
+            b_connect.setEnabled(false);
+            b_disconnect.setEnabled(true);
+
+            t_input.setEnabled(true);
+            b_send.setEnabled(true);
+            b_exit.setEnabled(false);
+
+            t_userId.setEditable(false);
+            t_serverAddress.setEditable(false);
+            t_serverPort.setEditable(false);
+        } else {
+            b_connect.setEnabled(true);
+            b_disconnect.setEnabled(false);
+
+            t_input.setEnabled(false);
+            b_send.setEnabled(false);
+            b_exit.setEnabled(true);
+
+            t_userId.setEditable(true);
+            t_serverAddress.setEditable(true);
+            t_serverPort.setEditable(true);
+        }
+    }
+
     private JPanel createControlPanel() {
         JPanel panel = new JPanel(new GridLayout(0, 3));
 
-        connectButton = new JButton("접속하기");
-        disconnectButton = new JButton("접속 끊기");
-        disconnectButton.setEnabled(false);
-        exitButton = new JButton("종료하기");
+        b_connect = new JButton("접속하기");
+        b_disconnect = new JButton("접속 끊기");
+        b_disconnect.setEnabled(false);
+        b_exit = new JButton("종료하기");
 
-        panel.add(connectButton);
-        panel.add(disconnectButton);
-        panel.add(exitButton);
+        panel.add(b_connect);
+        panel.add(b_disconnect);
+        panel.add(b_exit);
 
         // Event Listeners
         // 접속하기
-        connectButton.addActionListener(new ActionListener() {
+        b_connect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                MultiTalk.this.serverAddress = t_serverAddress.getText();
+                MultiTalk.this.serverPort = Integer.parseInt(t_serverPort.getText());
+
                 try {
                     connectToServer();
-                    sendMessage("/uid:" + t_id.getText());
+                    sendUserId();
                 } catch (IOException ex) {
                     printDisplay("서버와의 연결 오류: " + ex.getMessage());
                     return;
                 }
 
-                sendButton.setEnabled(true);
-                connectButton.setEnabled(false);
-                disconnectButton.setEnabled(true);
-                exitButton.setEnabled(false);
+                setUi(true);
             }
         });
 
         // 접속 끊기
-        disconnectButton.addActionListener(new ActionListener() {
+        b_disconnect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
@@ -185,15 +213,12 @@ public class MultiTalk {
 
                 printDisplay("서버와의 연결이 끊어졌습니다.");
 
-                sendButton.setEnabled(false);
-                connectButton.setEnabled(true);
-                disconnectButton.setEnabled(false);
-                exitButton.setEnabled(true);
+                setUi(false);
             }
         });
 
         // 종료하기
-        exitButton.addActionListener(new ActionListener() {
+        b_exit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.exit(0);
@@ -211,13 +236,44 @@ public class MultiTalk {
     /*
      * socket related methods
      */
-    private void sendMessage(String msg) {
+    private String getLocalAddress() {
+        InetAddress local = null;
+        String address = "";
         try {
-            out.write(msg + "\n");
+            local = InetAddress.getLocalHost();
+            address = local.getHostAddress();
+            System.out.println(address);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        return address;
+    }
+
+    private void sendUserId() {
+        String uid = t_userId.getText();
+
+        try {
+            out.write("/uid:" + uid + "\n");
+            out.flush();
+        } catch (IOException ex) {
+            System.err.println("클라이언트 전송 오류: " + ex.getMessage());
+            System.exit(-1);
+        }
+    }
+
+    private void sendMessage() {
+        String message = t_input.getText();
+        if (message.isEmpty()) return;
+
+        try {
+            out.write(message + "\n");
             out.flush();
         } catch (IOException e) {
             System.err.println("메시지 전송 오류: " + e.getMessage());
+            System.exit(-1);
         }
+
+        t_input.setText("");
     }
 
     private void receiveMessage() {
@@ -233,11 +289,7 @@ public class MultiTalk {
                 }
 
                 printDisplay("서버와의 연결이 끊어졌습니다.");
-
-                sendButton.setEnabled(false);
-                connectButton.setEnabled(true);
-                disconnectButton.setEnabled(false);
-                exitButton.setEnabled(true);
+                setUi(false);
 
                 receiveThread = null;
                 return;
@@ -251,14 +303,8 @@ public class MultiTalk {
 
     private void connectToServer() throws IOException {
         Socket socket = new Socket();
-        try {
-            socket.connect(
-                    new InetSocketAddress(t_serverAddress.getText(), Integer.parseInt(t_serverPort.getText())),
-                    3000
-            );
-        } catch (IOException e) {
-            throw new IOException(e.getMessage());
-        }
+        SocketAddress sa = new InetSocketAddress(serverAddress, serverPort);
+        socket.connect(sa, 3000);
 
         OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
         out = new BufferedWriter(osw);

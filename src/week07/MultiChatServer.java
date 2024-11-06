@@ -20,9 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-public class MultiChatServer {
-
-    private final JFrame frame;
+public class MultiChatServer extends JFrame {
     private final int port;
 
     private JTextArea t_display;
@@ -34,16 +32,16 @@ public class MultiChatServer {
     private ServerSocket serverSocket;
 
     public MultiChatServer(int port) {
-        this.port = port;
+        super("Multi Chat Server");
 
-        frame = new JFrame("Multi Chat Server");
+        this.port = port;
 
         buildGUI();
 
-        frame.setSize(400, 300);
-        frame.setLocation(900, 300);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        setSize(400, 300);
+        setLocation(900, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setVisible(true);
     }
 
     public static void main(String[] args) {
@@ -56,8 +54,8 @@ public class MultiChatServer {
      * GUI related methods
      */
     private void buildGUI() {
-        frame.add(createDisplayPanel(), BorderLayout.CENTER);
-        frame.add(createControlPanel(), BorderLayout.SOUTH);
+        add(createDisplayPanel(), BorderLayout.CENTER);
+        add(createControlPanel(), BorderLayout.SOUTH);
     }
 
     private JPanel createDisplayPanel() {
@@ -153,6 +151,9 @@ public class MultiChatServer {
                 if (clientSocket != null) {
                     clientSocket.close();
                 }
+                if (serverSocket != null) {
+                    serverSocket.close();
+                }
             } catch (IOException e) {
                 System.err.println("서버 닫기 오류: " + e.getMessage());
             }
@@ -218,15 +219,17 @@ public class MultiChatServer {
                     }
                 }
 
-                printDisplay(uid + "퇴장. 현재 참가자 수: " + users.size());
-                users.remove(this);
+                users.removeElement(this);
+                printDisplay(uid + " 퇴장. 현재 참가자 수: " + users.size());
             } catch (IOException e) {
+                users.removeElement(this);
                 System.err.println("서버 읽기 오류: " + e.getMessage());
             } finally {
                 try {
                     cs.close();
                 } catch (IOException e) {
                     System.err.println("서버 닫기 오류: " + e.getMessage());
+                    System.exit(-1 );
                 }
             }
         }
