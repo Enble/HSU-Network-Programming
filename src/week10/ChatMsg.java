@@ -4,11 +4,11 @@ import java.io.Serializable;
 import javax.swing.ImageIcon;
 
 public class ChatMsg implements Serializable {
-    public final static int MODE_LOGIN      = 0x1;
-    public final static int MODE_LOGOUT     = 0x2;
-    public final static int MODE_TX_STRING  = 0x10;
-    public final static int MODE_TX_FILE    = 0x20;
-    public final static int MODE_TX_IMAGE   = 0x40;
+    public static final int MODE_LOGIN      = 0x1;
+    public static final int MODE_LOGOUT     = 0x2;
+    public static final int MODE_TX_STRING  = 0x10;
+    public static final int MODE_TX_FILE    = 0x20;
+    public static final int MODE_TX_IMAGE   = 0x40;
 
     String userId;
     int mode;
