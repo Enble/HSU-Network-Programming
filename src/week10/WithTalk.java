@@ -1,3 +1,8 @@
+/*
+    학번 : 2091193
+    이름 : 최재영
+ */
+
 package week10;
 
 import java.awt.BorderLayout;
@@ -55,7 +60,7 @@ public class WithTalk extends JFrame {
     private Thread receiveThread = null;
 
     public WithTalk(String serverAddress, int serverPort) {
-        super("With Talk");
+        super("2091193 클라이언트");
 
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;

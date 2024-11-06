@@ -1,3 +1,8 @@
+/*
+    학번 : 2091193
+    이름 : 최재영
+ */
+
 package week10;
 
 import java.awt.BorderLayout;
@@ -31,7 +36,7 @@ public class WithChatServer extends JFrame {
     private ServerSocket serverSocket;
 
     public WithChatServer(int port) {
-        super("With Chat Server");
+        super("2091193 서버");
 
         this.port = port;
 
